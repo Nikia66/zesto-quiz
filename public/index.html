@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zesto 销售认证考试</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <img src="assets/logo.png" alt="Zesto" class="logo-img" />
+      <div>
+        <div>Zesto</div>
+        <div class="sub" data-i18n="appSub">销售认证在线考试系统</div>
+      </div>
+    </div>
+    <div class="lang-switch">
+      <button data-lang="zh">中文</button>
+      <button data-lang="pt">Português</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <p class="lead" data-i18n="homeLead"></p>
+
+      <h2 data-i18n="rulesTitle">评分规则</h2>
+      <div class="rules-grid">
+        <div class="rule"><div class="k" data-i18n="rDuration_k"></div><div class="v" data-i18n="rDuration_v"></div><small data-i18n="rDuration_note"></small></div>
+        <div class="rule"><div class="k" data-i18n="rCount_k"></div><div class="v" data-i18n="rCount_v"></div><small data-i18n="rCount_note"></small></div>
+        <div class="rule"><div class="k" data-i18n="rType_k"></div><div class="v" data-i18n="rType_v"></div></div>
+        <div class="rule"><div class="k" data-i18n="rPass_k"></div><div class="v" data-i18n="rPass_v"></div><small data-i18n="rPass_note"></small></div>
+        <div class="rule"><div class="k" data-i18n="rCover_k"></div><div class="v" data-i18n="rCover_v"></div></div>
+        <div class="rule"><div class="k" data-i18n="rOnline_k"></div><div class="v" data-i18n="rOnline_v"></div><small data-i18n="rOnline_note"></small></div>
+      </div>
+
+      <h3 data-i18n="partsTitle"></h3>
+      <div class="parts-list" id="partsList"></div>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="rOnline_k">信息登记</h2>
+      <div class="form-row">
+        <div class="field">
+          <label data-i18n="nameLabel"></label>
+          <input id="name" data-i18n-ph="namePh" autocomplete="off" required minlength="2" />
+        </div>
+        <div class="field">
+          <label data-i18n="idLabel"></label>
+          <input id="employeeId" data-i18n-ph="idPh" autocomplete="off" required />
+        </div>
+      </div>
+      <div class="err" id="err"></div>
+      <button class="btn block" id="startBtn" data-i18n="startBtn" type="button"></button>
+    </div>
+
+    <div class="footer-note">Zesto Sales Training · 九部曲认证考试</div>
+  </div>
+
+  <script src="assets/i18n.js"></script>
+  <script src="assets/common.js"></script>
+  <script>
+    (function () {
+      const lang = window.getLang();
+      document.documentElement.lang = lang;
+      window.applyStatic();
+      window.initLangSwitch();
+
+      const pl = document.getElementById('partsList');
+      window.PARTS.forEach((p) => {
+        const s = document.createElement('span');
+        s.textContent = p[lang];
+        pl.appendChild(s);
+      });
+
+      document.getElementById('startBtn').onclick = function () {
+        const name = document.getElementById('name').value.trim();
+        const id = document.getElementById('employeeId').value.trim();
+        const err = document.getElementById('err');
+        if (!name) { err.textContent = window.t('fillName'); return; }
+        if (name.length < 2) { err.textContent = window.t('nameTooShort'); return; }
+        if (!id) { err.textContent = window.t('fillId'); return; }
+        if (/\s/.test(id)) { err.textContent = window.t('idNoSpace'); return; }
+        sessionStorage.setItem('zesto_user', JSON.stringify({ name, employeeId: id, lang }));
+        location.href = 'quiz.html';
+      };
+    })();
+  </script>
+</body>
+</html>
