@@ -6,7 +6,8 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# 将 /api/* 映射到 Netlify Functions（隐藏答案 + 管理员接口都在函数里运行）
+# 前端页面里调用的 /api/* 全部由 Netlify Functions 在服务器端处理。
+# 答案只在服务端（netlify/functions/_lib/bank.mjs），浏览器拿到的题目不含答案。
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"

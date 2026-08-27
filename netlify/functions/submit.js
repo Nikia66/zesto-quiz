@@ -20,7 +20,7 @@ export async function handler(event) {
   const submittedAt = new Date().toISOString();
   const weakParts = g.partStats.filter((ps) => ps.correct < ps.total).map((ps) => ps.partName);
 
-  // 入库记录（仅摘要，perQuestion 仅用于即时结果页，不入库以节省空间）
+  // 入库记录（含逐题明细，供管理员查看每个学员的错题分布）
   const record = {
     id: randomUUID(),
     name: String(name),
@@ -33,6 +33,7 @@ export async function handler(event) {
     durationSec: Number(durationSec) || 0,
     submittedAt,
     weakParts,
+    perQuestion: g.perQuestion,
   };
   await writeResult(record.id, record);
 

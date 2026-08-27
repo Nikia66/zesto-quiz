@@ -18,10 +18,15 @@
   const tableBox = document.getElementById('tableBox');
   const totalRecords = document.getElementById('totalRecords');
   const keyHint = document.getElementById('keyHint');
+  const detailMask = document.getElementById('detailMask');
+  const detailTitle = document.getElementById('detailTitle');
+  const detailBody = document.getElementById('detailBody');
+  const detailCloseBtn = document.getElementById('detailCloseBtn');
 
   keyHint.textContent = window.t('adminKeyHint');
 
   let token = sessionStorage.getItem(TOKEN_KEY) || '';
+  let currentRows = [];
 
   function showAdmin() {
     loginBox.style.display = 'none';
@@ -101,6 +106,7 @@
     const filtered = kw
       ? rows.filter((r) => (r.name || '').toLowerCase().includes(kw) || (r.employeeId || '').toLowerCase().includes(kw))
       : rows;
+    currentRows = filtered;
 
     totalRecords.textContent = window.t('totalRecords', { n: rows.length }) +
       (kw ? `（${window.t('adminSearchPh')}：${esc(kw)}）` : '');
@@ -120,9 +126,10 @@
       <th>${esc(window.t('colTime'))}</th>
       <th>${esc(window.t('colDate'))}</th>
       <th>${esc(window.t('colWeak') || '薄弱项')}</th>
+      <th>${esc(window.t('detailBtn'))}</th>
     </tr>`;
 
-    const body = filtered.map((r) => {
+    const body = filtered.map((r, idx) => {
       const rate = ((r.rate || 0) * 100).toFixed(1) + '%';
       const badge = r.pass
         ? `<span class="badge p">${esc(window.t('statusPass'))}</span>`
@@ -138,11 +145,83 @@
         <td>${fmtTime(r.durationSec)}</td>
         <td>${esc(fmtDate(r.submittedAt))}</td>
         <td style="white-space:normal">${esc(weak)}</td>
+        <td><button class="btn secondary sm" onclick="window.__zqOpenDetail(${idx})">${esc(window.t('detailBtn'))}</button></td>
       </tr>`;
     }).join('');
 
     tableBox.innerHTML = `<table class="tbl"><thead>${head}</thead><tbody>${body}</tbody></table>`;
   }
+
+  function fmtAnswer(a) {
+    if (a == null) return window.t('unanswered');
+    if (Array.isArray(a)) return a.join(', ');
+    return String(a);
+  }
+
+  function openDetail(r) {
+    if (!r || !Array.isArray(r.perQuestion)) return;
+    const pq = r.perQuestion;
+    const wrong = pq.filter((p) => !p.correct);
+    const typeMap = { single: window.t('reportSingle'), multiple: window.t('reportMultiple'), judge: window.t('reportJudge') };
+    const partNameOf = (p) => (p.partName && (p.partName[lang] || p.partName.zh)) || ('部曲 ' + p.part);
+
+    const byPart = {};
+    pq.forEach((p) => {
+      const k = p.part;
+      if (!byPart[k]) byPart[k] = { name: partNameOf(p), total: 0, wrong: 0 };
+      byPart[k].total++;
+      if (!p.correct) byPart[k].wrong++;
+    });
+    const partRows = Object.values(byPart)
+      .sort((a, b) => a.name.localeCompare(b.name, 'zh'))
+      .map((o) => {
+        const pct = o.total ? Math.round((o.wrong / o.total) * 100) : 0;
+        return `<tr><td>${esc(o.name)}</td><td>${o.total}</td><td>${o.wrong}</td><td><div class="bar"><span style="width:${pct}%"></span></div></td></tr>`;
+      }).join('');
+
+    const byType = {};
+    pq.forEach((p) => {
+      const k = p.type;
+      if (!byType[k]) byType[k] = { name: typeMap[k] || k, total: 0, wrong: 0 };
+      byType[k].total++;
+      if (!p.correct) byType[k].wrong++;
+    });
+    const typeRows = Object.values(byType)
+      .map((o) => `<tr><td>${esc(o.name)}</td><td>${o.total}</td><td>${o.wrong}</td></tr>`)
+      .join('');
+
+    const wrongList = wrong.length
+      ? wrong
+          .map(
+            (p) => `<div class="q-item">
+          <div class="q-stem">${esc(p.stem)}</div>
+          <div class="q-meta">
+            <span class="badge w">${esc(window.t('detailYourAns'))}：${esc(fmtAnswer(p.yourAnswer))}</span>
+            <span class="badge ok">${esc(window.t('detailCorrectAns'))}：${esc(fmtAnswer(p.correctAnswer))}</span>
+          </div>
+          <div class="q-exp">${esc(p.explanation || '')}</div>
+        </div>`
+          )
+          .join('')
+      : `<p class="hint">${esc(window.t('detailNoWrong'))}</p>`;
+
+    detailTitle.textContent = window.t('detailTitle') + ' · ' + esc(r.name) + '（' + esc(r.employeeId) + '）';
+    detailBody.innerHTML = `
+      <p class="hint">${esc(window.t('detailCount', { n: pq.length, w: wrong.length }))}</p>
+      <h4>${esc(window.t('distByPart'))}</h4>
+      <table class="tbl"><thead><tr><th>${esc(window.t('detailPart'))}</th><th>${esc(window.t('reportCnt'))}</th><th>${esc(window.t('reportWrong'))}</th><th>%</th></tr></thead><tbody>${partRows}</tbody></table>
+      <h4>${esc(window.t('distByType'))}</h4>
+      <table class="tbl"><thead><tr><th>${esc(window.t('detailType'))}</th><th>${esc(window.t('reportCnt'))}</th><th>${esc(window.t('reportWrong'))}</th></tr></thead><tbody>${typeRows}</tbody></table>
+      <h4>${esc(window.t('detailWrongList'))}</h4>
+      ${wrongList}
+    `;
+    detailMask.style.display = 'flex';
+  }
+
+  window.__zqOpenDetail = (i) => openDetail(currentRows[i]);
+
+  detailCloseBtn.onclick = () => { detailMask.style.display = 'none'; };
+  detailMask.addEventListener('click', (e) => { if (e.target === detailMask) detailMask.style.display = 'none'; });
 
   // 事件
   loginBtn.onclick = login;
