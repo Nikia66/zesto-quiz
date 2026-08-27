@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zesto 成绩管理</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <img src="assets/logo.png" alt="Zesto" class="logo-img" />
+      <div>
+        <div>Zesto</div>
+        <div class="sub" data-i18n="adminTitle">学员成绩管理（管理员）</div>
+      </div>
+    </div>
+    <div class="lang-switch">
+      <button data-lang="zh">中文</button>
+      <button data-lang="pt">Português</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- 登录 gate -->
+    <div id="loginBox" class="card" style="max-width:420px;margin:36px auto 18px">
+      <h2 data-i18n="adminLoginTitle">管理员登录</h2>
+      <p class="hint" data-i18n="adminOnly">仅管理员可查看此页面。</p>
+      <div class="field" style="margin-top:12px">
+        <label data-i18n="adminUserLabel">用户名</label>
+        <input id="adminUser" type="text" autocomplete="off" data-i18n-ph="adminUserPh" />
+      </div>
+      <div class="field">
+        <label data-i18n="adminPassLabel">密码</label>
+        <input id="adminPass" type="password" autocomplete="off" data-i18n-ph="adminPassPh" />
+      </div>
+      <div class="err" id="loginErr"></div>
+      <button class="btn block" id="loginBtn" data-i18n="adminLoginBtn">登录</button>
+      <p class="hint" id="keyHint" style="margin-top:10px;text-align:center"></p>
+    </div>
+
+    <!-- 管理内容 -->
+    <div id="adminBox" style="display:none">
+      <div class="card">
+        <div class="toolbar">
+          <h2 data-i18n="adminTitle" style="margin:0">学员成绩管理（管理员）</h2>
+          <span style="flex:1"></span>
+          <input id="searchInput" type="text" data-i18n-ph="adminSearchPh" placeholder="" />
+          <button class="btn secondary" id="refreshBtn" data-i18n="adminRefresh">刷新</button>
+          <button class="btn" id="exportBtn" data-i18n="adminExport">导出 CSV</button>
+          <button class="btn secondary" id="logoutBtn" data-i18n="adminLogoutBtn">退出登录</button>
+        </div>
+        <div class="hint" id="totalRecords" style="margin-bottom:10px"></div>
+        <div id="tableBox"><p class="hint" data-i18n="loading">加载中…</p></div>
+        <a class="btn block" href="index.html" data-i18n="goExam" style="margin-top:16px">前往考试</a>
+      </div>
+    </div>
+
+    <!-- 学员答题明细弹窗 -->
+    <div id="detailMask" class="modal-mask" style="display:none">
+      <div class="modal" id="detailModal">
+        <div class="modal-head">
+          <h3 id="detailTitle"></h3>
+          <button class="modal-close" id="detailCloseBtn" aria-label="close">×</button>
+        </div>
+        <div class="modal-body" id="detailBody"></div>
+      </div>
+    </div>
+
+    <div class="footer-note">Zesto Sales Training · 管理员视图</div>
+  </div>
+
+  <script src="assets/i18n.js"></script>
+  <script src="assets/common.js"></script>
+  <script src="assets/admin.js"></script>
+</body>
+</html>
