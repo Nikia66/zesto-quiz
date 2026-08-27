@@ -1,61 +1,44 @@
-# Zesto 九部曲销售认证考试 · Netlify 正式发布版
+# Zesto 九部曲销售认证考试 · 最终部署版
 
-**真后端**：完整题库（含答案）只存在于服务端函数，学员端永远拿不到答案；判分、管理员鉴权、成绩存储全部在服务端完成。可正式上 Netlify 对外发布。
+**一句话：** 把文件夹上传到 GitHub 网页 → Netlify 连上 → 设个管理员密码 → 上线。答案藏在服务端，管理员页 `/admin.html` 直接看全部考生成绩。
 
-## 架构
-- `public/`：纯静态前端（首页 / 考试 / 结果 / 管理员），调用 `/api/*`。
-- `netlify/functions/`：后端函数（隐藏答案 + 判分 + 管理员接口）。
-  - `bank.js` → `GET /api/bank?lang=zh|pt`（**返回题目已剔除答案/解析**）
-  - `submit.js` → `POST /api/submit`（**服务端对照私有题库判分**，仅回传正确答用于学习）
-  - `admin/login.js` → `POST /api/admin/login`（HMAC 无状态令牌）
-  - `admin/results.js` → `GET /api/admin/results?token=`（成绩列表）
-  - `admin/export.js` → `GET /api/admin/export?token=&fmt=csv`（CSV 导出，带 BOM）
-  - `admin/logout.js` → `POST /api/admin/logout`（吊销令牌）
-- 成绩持久化：生产用 **Netlify Blobs**（自动创建、跨实例共享）；本地验证回退到 `functions/.local-data/`。
+## 功能清单（与之前要求一致）
+| 项目 | 说明 |
+|---|---|
+| 答案隐藏 | 完整题库（含答案）只在服务端 `netlify/functions/_lib/bank.mjs`，前端拿到的题目已剔除答案 |
+| 判分 | 交卷由服务端判分，多选须全对才算对 |
+| 双语 | 中文 / 葡语 一键切换 |
+| 考试规则 | 30 分钟，50 题随机抽 35，完成率 ≥90%（答对≥32）合格 |
+| 不通过提示 | 交卷不合格弹窗提醒 |
+| 每题解析 | 交卷后逐题显示正确答案 + 解析 + 薄弱模块分析 |
+| 姓名工号 | 首页必填，否则不能开考 |
+| Logo | 已用 Zesto Logo |
+| 成绩页 | 独立页面 `/admin.html`，登录后看全部考生成绩、搜索、导出 CSV；每行点「查看明细」弹窗看该学员**逐题错题分布**（按九大部曲 + 按题型的错题表 + 错题清单：学员作答 vs 正确答案 + 解析） |
+| 个人报告下载 | 学员考完在结果页点「下载成绩报告」，一键下载含**错题分布**（按九大部曲 + 按题型）、薄弱模块、逐题解析的自包含 HTML 报告（可打印成 PDF） |
 
-## 为什么不能“拖拽上传”部署
-拖拽上传只支持**纯静态文件**，跑不了函数。本版是真正的后端，必须用以下任一方式部署（都能在 Netlify 后台看到、可对外访问）：
+## 部署（零终端，只需网页点选）
+1. **GitHub 网页上传**：进你的仓库 → 绿色 `Add file` → `Upload files` → 把 `zesto-quiz` 文件夹**里面的所有内容**全选拖进虚线框（不是拖整个文件夹本身）→ 填说明 → `Commit changes`
+2. **Netlify 连接**：`Add new site` → `Import an existing project` → 选 GitHub 仓库 → `Deploy`（自动读取 `netlify.toml`，无需改设置）
+3. **设管理员密码（必做）**：Netlify 站点 → `Site settings` → `Environment variables` → `Add a variable`，加 `ADMIN_PASS` = 你的强密码 → 触发重新部署
 
-### 方式 A：连 GitHub 仓库（推荐，最省事）
-1. 把本目录推送到一个 GitHub 仓库。
-2. Netlify 后台 → **Add new site → Import an existing project** → 选该仓库。
-3. Netlify 会自动读取 `netlify.toml`（构建目录 `public`、函数目录 `netlify/functions`），无需改任何设置。
-4. 进入 **Site settings → Environment variables**，添加：
-   - `ADMIN_PASS` = 你的强密码（**务必设置**，覆盖默认 `zesto2026`）
-   - （可选）`ADMIN_USER` = 管理员账号，默认 `admin`
-5. 点 **Deploy**。完成后访问 `https://<你的站点>.netlify.app`，管理员页 `https://<站点>/admin.html`。
+## 上线后访问
+- 考试页：`https://你的站点名.netlify.app`
+- 成绩页：`https://你的站点名.netlify.app/admin.html`（用你设的 `ADMIN_PASS` 登录）
+- **下载个人报告**：学员交卷后在结果页点「下载成绩报告」（葡语：`Baixar relatório`），浏览器下载一个 `.html` 文件。文件内含：学员信息、成绩概要、错题分布（按九大部曲正确率表 + 按题型错题表）、薄弱模块与学习建议、逐题解析。双击用浏览器打开即可查看，按 `Ctrl/Cmd + P` 可另存为 PDF 分享。
 
-### 方式 B：netlify-cli 命令行
-```bash
-npm i -g netlify-cli
-netlify login
-# 在项目根目录（含 netlify.toml 的目录）：
-netlify init          # 首次：连接/创建站点，自动读取 netlify.toml
-netlify deploy --prod # 或：netlify deploy --prod --dir=public --functions=netlify/functions
-```
-部署前同样在 `netlify env:set ADMIN_PASS 你的强密码` 设置密码。
+## 怎么进管理员页面（看所有人成绩）
+1. 浏览器打开 `https://你的站点名.netlify.app/admin.html`（考试页底部也有「前往考试」旁可直达，或直接改网址路径为 `/admin.html`）。
+2. 输入用户名 `admin`、密码 = 你设的 `ADMIN_PASS`（**不是**默认 `zesto2026`，一旦设了环境变量就以你设的为准）。
+3. 登录后看到表格：姓名、工号、语言、成绩（答对/总题）、完成率、合格状态、用时、交卷时间、薄弱项。
+4. 想看某个学员**具体错在哪**：点该行右侧「查看明细」→ 弹窗显示：
+   - 按九大部曲的错题分布（带进度条）
+   - 按题型的错题数（单选/多选/判断）
+   - 错题清单（题干 + 学员作答 vs 正确答案 + 解析）
+5. 顶部「导出 CSV」把所有成绩导出（Excel 中文不乱码）；「刷新」拉最新；「搜索」按姓名/工号过滤。
 
-## 本地开发预览
-```bash
-npm i -g netlify-cli
-netlify dev           # 自动启动前端 + 函数，访问 http://localhost:8888
-```
-（本地无 `NETLIFY` 环境变量时，成绩写入 `functions/.local-data/`，仅用于本地验证。）
+> 学员考完成绩**自动存服务端**，你无需让他们下载再发给你——直接来 `/admin.html` 看即可。
 
-## 安全要点（已落实）
-- 学员 `GET /api/bank` 返回的题目**不含 `answer` 与 `explanation`**——即便开开发者工具抓包也看不到答案。
-- 答案只在服务端函数内，判分在服务端完成，学员无法篡改成绩。
-- 管理员令牌为 HMAC 签名（密钥 = `ADMIN_PASS`），有效期 2 小时，登出即吊销；未授权访问一律 401。
-- 生产环境建议通过环境变量设置 `ADMIN_PASS`，不要使用默认密码。
-
-## 接口速查
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET  | `/api/bank?lang=zh` | 抽题（无答案） |
-| POST | `/api/submit` | 交卷判分 |
-| POST | `/api/admin/login` | 管理员登录 `{user,pass}` |
-| GET  | `/api/admin/results?token=` | 成绩列表 |
-| GET  | `/api/admin/export?token=&fmt=csv` | CSV 导出 |
-| POST | `/api/admin/logout` | 登出吊销 `{token}` |
-
-管理员默认账号：`admin` / 密码 `zesto2026`（生产请改 `ADMIN_PASS`）。
+## 注意
+- 本版用 **Netlify Functions**（真后端），**不能拖拽部署**（拖拽只支持纯静态文件，跑不了后端函数）。但部署只需在 GitHub 网页上传一次，不用开终端。
+- 上线务必设置 `ADMIN_PASS` 环境变量；不设则用默认密码 `zesto2026`，不安全。
+- 考生成绩存储在 Netlify Blobs，管理员在 `/admin.html` 登录后即可查看、导出。

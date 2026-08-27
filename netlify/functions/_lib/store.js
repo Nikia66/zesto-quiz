@@ -1,22 +1,21 @@
-// 成绩存储：生产环境用 Netlify Blobs（线上持久化、跨实例共享）；
-// 本地未部署（NETLIFY 未注入）时自动回退到 .local-data 目录（仅本地验证用）。
+// 成绩存储：生产环境优先用 Netlify Blobs（线上持久化、跨实例共享）；
+// 当 Blobs 初始化失败或本地运行时，回退到 os.tmpdir() 下的本地文件。
 import { promises as fs } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
+import os from 'os';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const LOCAL_DIR = join(__dirname, '..', '.local-data');
+const LOCAL_DIR = process.env.NETLIFY_LOCAL_DATA_DIR || join(os.tmpdir(), 'zesto-local-data');
 const STORE = 'zesto-quiz-results';
 const REVOKED_KEY = 'revoked-tokens';
 
 async function getBlobStore() {
-  // 仅在 Netlify 运行环境（NETLIFY=true）或显式 USE_BLOBS=true 时使用 Blobs。
-  // 生产环境若初始化失败，错误会向上抛出（避免静默回退到只读文件系统导致提交 500）。
-  if (process.env.NETLIFY === 'true' || process.env.USE_BLOBS === 'true') {
+  // 尽量使用 Blobs；任何初始化失败都静默回退到本地文件，避免函数崩溃。
+  try {
     const { getStore } = await import('@netlify/blobs');
     return getStore({ name: STORE });
+  } catch {
+    return null;
   }
-  return null;
 }
 
 export async function writeResult(key, value) {
@@ -32,16 +31,20 @@ export async function writeResult(key, value) {
 export async function listResults() {
   const store = await getBlobStore();
   if (store) {
-    const { blobs } = await store.list();
-    const items = [];
-    for (const b of blobs) {
-      const d = await store.getJSON(b.key);
-      if (d) items.push(d);
+    try {
+      const { blobs } = await store.list();
+      const items = [];
+      for (const b of blobs) {
+        const d = await store.getJSON(b.key);
+        if (d) items.push(d);
+      }
+      return items;
+    } catch {
+      // Blobs 列表失败时回退本地
     }
-    return items;
   }
   await fs.mkdir(LOCAL_DIR, { recursive: true });
-  const files = (await fs.readdir(LOCAL_DIR)).filter((f) => f.endsWith('.json'));
+  const files = (await fs.readdir(LOCAL_DIR)).filter((f) => f.endsWith('.json') && f !== 'revoked.json');
   const items = [];
   for (const f of files) {
     try {
@@ -53,7 +56,7 @@ export async function listResults() {
   return items;
 }
 
-// 轻量令牌吊销（登出）：生产用 Blobs 单键 JSON 数组；本地回退文件
+// 轻量令牌吊销（登出）
 export async function addRevoked(token) {
   try {
     const store = await getBlobStore();
