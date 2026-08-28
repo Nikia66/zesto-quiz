@@ -5,6 +5,6 @@
   "description": "Zesto 九部曲销售认证考试 —— 真后端（隐藏答案 + 管理员接口），部署于 Netlify Functions + Blobs。",
   "type": "module",
   "dependencies": {
-    "@netlify/blobs": "^6.1.0"
+    "@netlify/blobs": "^10.7.13"
   }
 }
