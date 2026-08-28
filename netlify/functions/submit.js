@@ -63,6 +63,14 @@ export default async function handler(request) {
   };
   await writeResult(record.id, record);
 
+  // 兜底：同时提交到 Netlify Forms（无需 API Token，管理员直接在 Netlify 后台 Forms 查看）
+  try {
+    await submitToNetlifyForm(request, record);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.log('[submit] Netlify Forms fallback failed:', err && err.message ? err.message : err);
+  }
+
   // 返回给学员：含逐题解析（学习用），但 rely 服务端判分，不含题库答案源
   const result = {
     ...g,
@@ -76,4 +84,32 @@ export default async function handler(request) {
     status: 200,
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
   });
+}
+
+async function submitToNetlifyForm(request, record) {
+  const host = request.headers.get('host') || 'localhost';
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  const origin = `${proto}://${host}`;
+  const params = new URLSearchParams({
+    'form-name': 'zesto-results',
+    employeeId: String(record.employeeId),
+    name: String(record.name),
+    lang: String(record.lang),
+    score: `${record.correct}/${record.total}`,
+    rate: String((record.rate * 100).toFixed(1)),
+    submittedAt: String(record.submittedAt),
+    data: JSON.stringify(record),
+  });
+  const res = await fetch(origin + '/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Referer': origin + '/',
+    },
+    body: params.toString(),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Netlify Forms ${res.status}: ${text.slice(0, 200)}`);
+  }
 }

@@ -59,6 +59,17 @@
     <div class="footer-note">Zesto Sales Training · 九部曲认证考试</div>
   </div>
 
+  <!-- Netlify Forms：成绩兜底存储（无需 API Token，提交后在 Netlify 后台 Forms 查看） -->
+  <form name="zesto-results" data-netlify="true" hidden>
+    <input type="text" name="employeeId" />
+    <input type="text" name="name" />
+    <input type="text" name="lang" />
+    <input type="text" name="score" />
+    <input type="text" name="rate" />
+    <input type="text" name="submittedAt" />
+    <input type="text" name="data" />
+  </form>
+
   <script src="assets/i18n.js"></script>
   <script src="assets/common.js"></script>
   <script>

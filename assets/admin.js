@@ -27,6 +27,7 @@
 
   let token = sessionStorage.getItem(TOKEN_KEY) || '';
   let currentRows = [];
+  let lastDiag = null;
 
   function showAdmin() {
     loginBox.style.display = 'none';
@@ -95,6 +96,7 @@
       if (resp.status === 401) { showLogin(); return; }
       if (!resp.ok) throw new Error('bad status ' + resp.status);
       const data = await resp.json();
+      lastDiag = data.diag || null;
       renderTable(data.results || []);
     } catch (e) {
       tableBox.innerHTML = `<p class="hint">${window.t('adminLoadErr')}</p>`;
@@ -112,7 +114,26 @@
       (kw ? `（${window.t('adminSearchPh')}：${esc(kw)}）` : '');
 
     if (!filtered.length) {
-      tableBox.innerHTML = `<p class="hint">${window.t('adminNoResults')}</p>`;
+      const host = location.host || '';
+      const slug = host.replace(/\.netlify\.app.*$/, '').replace(/:\d+$/, '');
+      const formsUrl = slug && slug !== host
+        ? `https://app.netlify.com/sites/${slug}/forms`
+        : 'https://app.netlify.com/';
+      // 未配置 Forms API 凭证（NETLIFY_SITE_ID / NETLIFY_API_TOKEN）时给出明确指引
+      if (lastDiag && (!lastDiag.siteId || !lastDiag.token)) {
+        const miss = [];
+        if (!lastDiag.siteId) miss.push('NETLIFY_SITE_ID');
+        if (!lastDiag.token) miss.push('NETLIFY_API_TOKEN');
+        tableBox.innerHTML = `
+          <p class="hint">${window.t('adminNoResults')}</p>
+          <p class="hint" style="margin-top:10px">${window.t('adminNeedConfig', { v: miss.join('、') })}</p>
+          <p style="margin-top:8px"><a class="btn secondary" href="${esc(formsUrl)}" target="_blank" rel="noopener">${esc(window.t('adminFormsLink'))}</a></p>`;
+        return;
+      }
+      tableBox.innerHTML = `
+        <p class="hint">${window.t('adminNoResults')}</p>
+        <p class="hint" style="margin-top:10px">${window.t('adminFormsFallback')}</p>
+        <p style="margin-top:8px"><a class="btn secondary" href="${esc(formsUrl)}" target="_blank" rel="noopener">${esc(window.t('adminFormsLink'))}</a></p>`;
       return;
     }
 

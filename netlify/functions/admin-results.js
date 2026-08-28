@@ -1,5 +1,5 @@
-import { listResults } from './_lib/store.js';
 import { checkAdmin } from './_lib/auth.js';
+import { listFormResults, formsConfigured, formsDiag } from './_lib/forms.js';
 
 // GET /api/admin/results?token=...  → 返回全部成绩（需有效管理员令牌）
 export default async function handler(request) {
@@ -11,9 +11,35 @@ export default async function handler(request) {
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
     });
   }
-  const rows = (await listResults()).sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''));
-  return new Response(JSON.stringify({ results: rows }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
-  });
+
+  // 主数据源：Netlify Forms（submit.js 已写入，这里内联拉回，管理页可直接查看）
+  if (formsConfigured()) {
+    try {
+      const rows = await listFormResults();
+      return new Response(JSON.stringify({ results: rows || [], source: 'forms' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log('[admin] Forms API error, fallback to blobs:', e && e.message);
+    }
+  }
+
+  // 兜底：Blobs（若已正确配置）
+  const { listResults } = await import('./_lib/store.js');
+  const rows = (await listResults()).sort((a, b) =>
+    (b.submittedAt || '').localeCompare(a.submittedAt || '')
+  );
+  return new Response(
+    JSON.stringify({
+      results: rows,
+      source: 'blobs',
+      diag: formsConfigured() ? null : formsDiag(),
+    }),
+    {
+      status: 200,
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+    }
+  );
 }

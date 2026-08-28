@@ -21,17 +21,10 @@ function apiToken() {
 }
 
 async function getBlobStore() {
-  // 1) 自动上下文（Functions v2 / Edge Functions / CLI 关联站点时生效）
-  try {
-    return getStore(STORE);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.log('[store] auto-context getStore failed:', err && err.message ? err.message : err);
-  }
-
-  // 2) 显式 API 凭证（绕过自动上下文检测）
   const sid = siteId();
   const token = apiToken();
+
+  // 1) 若显式凭证齐全，优先用显式凭证（绕过缺失的自动上下文，这才是用户配置的 token 生效路径）
   if (sid && token) {
     try {
       return getStore({ name: STORE, siteID: sid, token, consistency: 'strong' });
@@ -42,6 +35,14 @@ async function getBlobStore() {
   } else {
     // eslint-disable-next-line no-console
     console.log('[store] explicit API credentials missing. sid=', Boolean(sid), 'token=', Boolean(token));
+  }
+
+  // 2) 再试自动上下文（Functions v2 / Edge Functions / CLI 关联站点时生效）
+  try {
+    return getStore(STORE);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.log('[store] auto-context getStore failed:', err && err.message ? err.message : err);
   }
 
   return null;

@@ -1,5 +1,5 @@
-import { listResults } from './_lib/store.js';
 import { checkAdmin } from './_lib/auth.js';
+import { listFormResults, formsConfigured } from './_lib/forms.js';
 
 function csvCell(v) {
   const s = String(v == null ? '' : v);
@@ -18,14 +18,27 @@ export default async function handler(request) {
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
     });
   }
+
+  let rows = [];
+  if (formsConfigured()) {
+    try {
+      rows = (await listFormResults()) || [];
+    } catch (e) {
+      // 落到 Blobs
+    }
+  }
+  if (!rows.length) {
+    const { listResults } = await import('./_lib/store.js');
+    rows = await listResults();
+  }
+
   if ((q.fmt || 'csv') !== 'csv') {
-    const rows = await listResults();
     return new Response(JSON.stringify({ results: rows }), {
       status: 200,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
     });
   }
-  const rows = await listResults();
+
   const header = 'name,employeeId,lang,correct,total,rate,pass,durationSec,submittedAt,weakParts\n';
   const body = rows
     .map((r) =>
