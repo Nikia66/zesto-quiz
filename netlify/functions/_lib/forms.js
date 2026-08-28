@@ -21,11 +21,18 @@ async function getFormId() {
   const r = await fetch(
     `https://api.netlify.com/api/v1/sites/${SITE_ID}/forms?access_token=${TOKEN}`
   );
-  if (!r.ok) throw new Error(`forms list ${r.status}`);
+  if (!r.ok) {
+    if (r.status === 401 || r.status === 403) throw new Error('token 无权限或无效（HTTP ' + r.status + '）');
+    if (r.status === 404) throw new Error('Site ID 不正确（HTTP 404）');
+    throw new Error(`forms list HTTP ${r.status}`);
+  }
   const list = await r.json();
   const form =
     (list || []).find((f) => f.name === FORM_NAME) || (list || [])[0];
-  return form && form.id ? form.id : null;
+  if (!form || !form.id) {
+    throw new Error('表单 zesto-results 未被 Netlify 检测到（请先在 Forms 标签页点击 Enable form detection 并重新部署）');
+  }
+  return form.id;
 }
 
 export async function listFormResults() {

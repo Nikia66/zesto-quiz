@@ -28,6 +28,7 @@
   let token = sessionStorage.getItem(TOKEN_KEY) || '';
   let currentRows = [];
   let lastDiag = null;
+  let lastData = null;
 
   function showAdmin() {
     loginBox.style.display = 'none';
@@ -97,6 +98,7 @@
       if (!resp.ok) throw new Error('bad status ' + resp.status);
       const data = await resp.json();
       lastDiag = data.diag || null;
+      lastData = data;
       renderTable(data.results || []);
     } catch (e) {
       tableBox.innerHTML = `<p class="hint">${window.t('adminLoadErr')}</p>`;
@@ -119,6 +121,17 @@
       const formsUrl = slug && slug !== host
         ? `https://app.netlify.com/sites/${slug}/forms`
         : 'https://app.netlify.com/';
+
+      // 运行报错：直接暴露真实原因（Site ID 错 / token 无权限 / 表单未检测 / Blobs 异常）
+      if (lastData && (lastData.source === 'forms-error' || lastData.source === 'blobs-error')) {
+        tableBox.innerHTML = `
+          <p class="hint">${window.t('adminNoResults')}</p>
+          <p class="hint" style="margin-top:10px;color:#c0392b">${esc(window.t('adminReadErr'))}${esc(lastData.error || '未知错误')}</p>
+          <p class="hint" style="margin-top:6px">来源：${esc(lastData.source)}</p>
+          <p style="margin-top:8px"><a class="btn secondary" href="${esc(formsUrl)}" target="_blank" rel="noopener">${esc(window.t('adminFormsLink'))}</a></p>`;
+        return;
+      }
+
       // 未配置 Forms API 凭证（NETLIFY_SITE_ID / NETLIFY_API_TOKEN）时给出明确指引
       if (lastDiag && (!lastDiag.siteId || !lastDiag.token)) {
         const miss = [];
