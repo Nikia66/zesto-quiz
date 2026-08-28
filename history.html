@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zesto 历史成绩</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <style>
+    .history-list { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+    .history-card { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: #fff; }
+    .history-card .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .history-card .score { font-size: 22px; font-weight: 800; color: var(--zesto-red); }
+    .history-card .score.pass { color: var(--ok); }
+    .history-card .meta { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .history-card .actions { display: flex; gap: 8px; margin-top: 10px; }
+    .history-card .actions button { flex: 1; }
+    .history-empty { text-align: center; padding: 48px 20px; color: #6b7280; }
+    .history-toolbar { display: flex; gap: 10px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <img src="assets/logo.png" alt="Zesto" class="logo-img" />
+      <div>
+        <div>Zesto</div>
+        <div class="sub" data-i18n="historyTitle">我的历史成绩</div>
+      </div>
+    </div>
+    <div class="lang-switch">
+      <button data-lang="zh">中文</button>
+      <button data-lang="pt">Português</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div id="historyBox"></div>
+    <div class="history-toolbar">
+      <button class="btn secondary block" id="backBtn" data-i18n="backHome" style="flex:1"></button>
+    </div>
+    <div class="footer-note">Zesto Sales Training · 九部曲认证考试</div>
+  </div>
+
+  <script src="assets/i18n.js"></script>
+  <script src="assets/common.js"></script>
+  <script src="assets/history.js"></script>
+</body>
+</html>

@@ -69,10 +69,13 @@ export function grade({ lang = 'zh', ids = [], answers = {} }) {
       type: q.type,
       key: !!q.key,
       stem: q[L].stem,
+      stemI18n: { zh: q.zh.stem, pt: q.pt.stem },
       options: q[L].options,
+      optionsI18n: { zh: q.zh.options, pt: q.pt.options },
       yourAnswer: sel ?? null,
       correctAnswer: q.zh.answer,
       explanation: q[L].explanation,
+      explanationI18n: { zh: q.zh.explanation, pt: q.pt.explanation },
       correct: ok,
     });
   }

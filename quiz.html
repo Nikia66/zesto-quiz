@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Zesto 成绩</title>
+  <title>Zesto 考试</title>
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
       <img src="assets/logo.png" alt="Zesto" class="logo-img" />
       <div>
         <div>Zesto</div>
-        <div class="sub" data-i18n="resultTitle">考试成绩</div>
+        <div class="sub" data-i18n="examTitle">考试进行中</div>
       </div>
     </div>
     <div class="lang-switch">
@@ -21,20 +21,25 @@
     </div>
   </div>
 
-  <div class="wrap">
-    <div id="resultBox"></div>
-    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
-      <button class="btn block" id="downloadReportBtn" data-i18n="downloadReport" style="flex:1;min-width:120px"></button>
-      <button class="btn secondary block" id="historyBtn" data-i18n="resultHistoryBtn" style="flex:1;min-width:120px"></button>
-      <button class="btn secondary block" id="backBtn" data-i18n="backHome" style="flex:1;min-width:120px"></button>
+  <div class="wrap wrap-wide">
+    <div class="exam-bar">
+      <div class="exam-meta">
+        <span class="tag part" data-i18n="timeLeft"></span>
+        <span id="timer" class="timer">30:00</span>
+        <span class="tag" id="progress">—</span>
+      </div>
+      <button class="btn submit" id="submitBtn" data-i18n="submitBtn" style="display:none"></button>
     </div>
+
+    <div id="quizBox" class="quiz-box">
+      <div class="card"><p class="hint" data-i18n="loading"></p></div>
+    </div>
+
     <div class="footer-note">Zesto Sales Training · 九部曲认证考试</div>
   </div>
 
-  <div id="failModal"></div>
-
   <script src="assets/i18n.js"></script>
   <script src="assets/common.js"></script>
-  <script src="assets/result.js"></script>
+  <script src="assets/quiz.js"></script>
 </body>
 </html>

@@ -20,6 +20,14 @@
 1. **GitHub 网页上传**：进你的仓库 → 绿色 `Add file` → `Upload files` → 把 `zesto-quiz` 文件夹**里面的所有内容**全选拖进虚线框（不是拖整个文件夹本身）→ 填说明 → `Commit changes`
 2. **Netlify 连接**：`Add new site` → `Import an existing project` → 选 GitHub 仓库 → `Deploy`（自动读取 `netlify.toml`，无需改设置）
 3. **设管理员密码（必做）**：Netlify 站点 → `Site settings` → `Environment variables` → `Add a variable`，加 `ADMIN_PASS` = 你的强密码 → 触发重新部署
+4. **设 Netlify API Token（必做，否则成绩无法持久化）**：
+   - 打开 [Netlify User settings → Applications → Personal access tokens](https://app.netlify.com/user/applications/personal-access-tokens)（登录后右上角头像 → User settings → Applications → Personal access tokens）
+   - 点 **New access token** → 名称随便填（如 `zesto-quiz`）→ 复制生成的 token
+   - 回到站点 → `Site settings` → `Environment variables` → `Add a variable`
+   - 加 `NETLIFY_API_TOKEN` = 刚才复制的 token
+   - 再触发一次重新部署（改任意环境变量或到 Deploys 页点 **Trigger deploy → Deploy site**）
+
+> 为什么需要 token？Netlify Blobs 在部分站点/账号下无法自动拿到运行上下文，显式传入 API token 后成绩才能跨请求持久化，管理员页才能看到记录。
 
 ## 上线后访问
 - 考试页：`https://你的站点名.netlify.app`
@@ -41,4 +49,5 @@
 ## 注意
 - 本版用 **Netlify Functions**（真后端），**不能拖拽部署**（拖拽只支持纯静态文件，跑不了后端函数）。但部署只需在 GitHub 网页上传一次，不用开终端。
 - 上线务必设置 `ADMIN_PASS` 环境变量；不设则用默认密码 `zesto2026`，不安全。
-- 考生成绩存储在 Netlify Blobs，管理员在 `/admin.html` 登录后即可查看、导出。
+- 考生成绩存储在 Netlify Blobs，**必须同时设置 `NETLIFY_API_TOKEN`** 才能让成绩持久化；否则管理员页会显示 0 条记录。
+- 管理员在 `/admin.html` 登录后即可查看、导出成绩。

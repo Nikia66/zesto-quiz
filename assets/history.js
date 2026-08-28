@@ -4,124 +4,107 @@
   window.applyStatic();
   window.initLangSwitch();
 
-  const result = JSON.parse(sessionStorage.getItem('zesto_result') || 'null');
-  if (!result) { location.href = 'index.html'; return; }
-  const L = lang;
-  const box = document.getElementById('resultBox');
+  const box = document.getElementById('historyBox');
 
-  const ratePct = (result.rate * 100).toFixed(1) + '%';
-  const wrong = result.total - result.correct;
-  const status = result.pass ? window.t('statusPass') : window.t('statusFail');
-  const timeStr = window.fmtDuration(result.durationSec || 0);
-  const dateStr = result.submittedAt ? new Date(result.submittedAt).toLocaleString(lang === 'zh' ? 'zh-CN' : 'pt-BR') : '-';
+  function load() {
+    let records = [];
+    try {
+      records = JSON.parse(localStorage.getItem('zesto_history') || '[]');
+    } catch {
+      records = [];
+    }
+    render(records);
+  }
 
-  const weakParts = result.partStats
-    .filter((p) => p.correct < p.total)
-    .sort((a, b) => (b.total - b.correct) - (a.total - a.correct));
+  function render(records) {
+    if (!records || records.length === 0) {
+      box.innerHTML = `<div class="card history-empty"><div style="font-size:42px;margin-bottom:12px">📋</div><h2 data-i18n="historyTitle"></h2><p>${window.t('historyEmpty')}</p></div>`;
+      window.applyStatic(box);
+      return;
+    }
 
-  const banner = `
-    <div class="score-banner ${result.pass ? 'pass' : 'fail'}">
-      <div>
-        <div class="lbl" data-i18n="yourScore"></div>
-        <div class="big">${result.correct}/${result.total}</div>
-        <div class="lbl">${window.t('rateLabel')}: ${ratePct}</div>
-      </div>
-      <div class="status-pill">${status}</div>
-    </div>`;
+    const listHtml = records.map((r, idx) => {
+      const ratePct = (r.rate * 100).toFixed(1) + '%';
+      const dateStr = r.submittedAt ? new Date(r.submittedAt).toLocaleString(lang === 'zh' ? 'zh-CN' : 'pt-BR') : '-';
+      const scoreCls = r.pass ? 'score pass' : 'score';
+      const status = r.pass ? window.t('statusPass') : window.t('statusFail');
+      return `
+        <div class="history-card">
+          <div class="top">
+            <div>
+              <div class="${scoreCls}">${r.correct}/${r.total}</div>
+              <div class="meta">${window.t('rateLabel')}: ${ratePct} · ${status}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:600">${escapeHtml(r.name)}</div>
+              <div class="meta">${escapeHtml(r.employeeId)}</div>
+            </div>
+          </div>
+          <div class="meta">${window.t('historyDate')}: ${dateStr}</div>
+          <div class="actions">
+            <button class="btn" onclick="window.viewDetail(${idx})">${window.t('historyView')}</button>
+            <button class="btn" onclick="window.downloadReport(${idx})">${window.t('historyDownload')}</button>
+            <button class="btn secondary" onclick="window.deleteOne(${idx})">${window.t('historyDelete')}</button>
+          </div>
+        </div>`;
+    }).join('');
 
-  const dash = `
-    <div class="card">
-      <div class="dash-grid">
-        <div class="dash"><div class="v" style="color:var(--ok)">${result.correct}</div><div class="k" data-i18n="dashCorrect"></div></div>
-        <div class="dash"><div class="v" style="color:var(--zesto-red)">${wrong}</div><div class="k" data-i18n="dashWrong"></div></div>
-        <div class="dash"><div class="v">${timeStr}</div><div class="k" data-i18n="dashTime"></div></div>
-        <div class="dash"><div class="v" style="font-size:15px">${dateStr}</div><div class="k" data-i18n="dashDate"></div></div>
-      </div>
-    </div>`;
-
-  let weakHtml = '';
-  if (weakParts.length === 0) {
-    weakHtml = `<div class="weak"><h3 data-i18n="weakTitle"></h3><p>${window.t('weakNone')}</p></div>`;
-  } else {
-    const weakList = weakParts.map((p) => `<li>${p.partName[L]} — ${window.t('dashWrong')} ${p.total - p.correct}/${p.total}</li>`).join('');
-    const sugList = weakParts.map((p) => `<li>${p.partName[L]}</li>`).join('');
-    weakHtml = `
-      <div class="weak">
-        <h3 data-i18n="weakTitle"></h3>
-        <p>${window.t('weakIntro')}</p>
-        <ul>${weakList}</ul>
-      </div>
+    box.innerHTML = `
       <div class="card">
-        <h3 data-i18n="suggestTitle"></h3>
-        <p class="hint">${window.t('suggestIntro')}</p>
-        <ul>${sugList}</ul>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <h2 data-i18n="historyTitle"></h2>
+          <span class="hint">${window.t('historyCount', { n: records.length })}</span>
+        </div>
+        <div class="history-list">${listHtml}</div>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn secondary block" onclick="window.deleteAll()">${window.t('historyDeleteAll')}</button>
       </div>`;
+    window.applyStatic(box);
   }
 
-  const expHtml = result.perQuestion.map((q, i) => {
-    const cls = q.correct ? 'ok' : 'no';
-    const your = Array.isArray(q.yourAnswer) ? q.yourAnswer.join(', ') : (q.yourAnswer || window.t('unanswered'));
-    const yourCls = q.correct ? 'cor' : 'my';
-    const stemText = (q.stemI18n && q.stemI18n[L]) || q.stem;
-    const expText = (q.explanationI18n && q.explanationI18n[L]) || q.explanation;
-    return `
-      <div class="exp-item ${cls}">
-        <div class="h"><span class="qn">${i + 1}. ${escapeHtml(stemText)}</span>
-          <span class="tag part">${q.partName[L]}</span></div>
-        <div class="ans">
-          ${window.t('yourAns')}: <span class="${yourCls}">${your}</span> &nbsp;|&nbsp;
-          ${window.t('corAns')}: <span class="cor">${q.correctAnswer}</span>
-        </div>
-        <div class="why">${escapeHtml(expText)}</div>
-      </div>`;
-  }).join('');
-
-  box.innerHTML = banner + dash + weakHtml +
-    `<div class="card"><h2 data-i18n="expTitle"></h2>${expHtml}</div>`;
-  window.applyStatic(box);
-
-  // 自动保存到本地历史记录（Plan B：即使服务端成绩同步失败，学员也能在 history.html 查看/下载）
-  saveToHistory(result);
-
-  // 不通过警告弹窗
-  if (!result.pass) {
-    const modal = document.getElementById('failModal');
-    modal.innerHTML = `
-      <div class="modal-mask">
-        <div class="modal">
-          <div class="ic">⚠️</div>
-          <h3>${window.t('failTitle')}</h3>
-          <p>${window.t('failText')}</p>
-          <button class="btn" id="failOk">${window.t('failBtn')}</button>
-        </div>
-      </div>`;
-    document.getElementById('failOk').onclick = () => { modal.innerHTML = ''; };
-  }
-
-  document.getElementById('backBtn').onclick = () => {
-    sessionStorage.removeItem('zesto_result');
-    location.href = 'index.html';
+  window.viewDetail = function (idx) {
+    let records = [];
+    try { records = JSON.parse(localStorage.getItem('zesto_history') || '[]'); } catch { return; }
+    const r = records[idx];
+    if (!r) return;
+    sessionStorage.setItem('zesto_result', JSON.stringify(r));
+    location.href = 'result.html';
   };
 
-  document.getElementById('downloadReportBtn').onclick = downloadReport;
+  window.deleteOne = function (idx) {
+    let records = [];
+    try { records = JSON.parse(localStorage.getItem('zesto_history') || '[]'); } catch { return; }
+    records.splice(idx, 1);
+    localStorage.setItem('zesto_history', JSON.stringify(records));
+    load();
+  };
 
-  const historyBtn = document.getElementById('historyBtn');
-  if (historyBtn) historyBtn.onclick = () => { location.href = 'history.html'; };
+  window.deleteAll = function () {
+    if (!confirm(lang === 'zh' ? '确定清空所有历史成绩？' : 'Tem certeza de que deseja limpar todo o histórico?')) return;
+    localStorage.removeItem('zesto_history');
+    load();
+  };
 
-  function downloadReport() {
-    const L = lang;
+  window.downloadReport = function (idx) {
+    let records = [];
+    try { records = JSON.parse(localStorage.getItem('zesto_history') || '[]'); } catch { return; }
+    const result = records[idx];
+    if (!result) return;
+    buildAndDownloadReport(result, lang);
+  };
+
+  function buildAndDownloadReport(result, L) {
     const T = (k) => (window.I18N[L][k] !== undefined ? window.I18N[L][k] : k);
     const tUnanswered = T('unanswered');
     const nowStr = new Date().toLocaleString(L === 'zh' ? 'zh-CN' : 'pt-BR');
 
-    // 题型分布聚合
     const typeAgg = { single: { total: 0, wrong: 0 }, multiple: { total: 0, wrong: 0 }, judge: { total: 0, wrong: 0 } };
     result.perQuestion.forEach((q) => {
       if (typeAgg[q.type]) { typeAgg[q.type].total++; if (!q.correct) typeAgg[q.type].wrong++; }
     });
     const typeNameMap = { single: T('reportSingle'), multiple: T('reportMultiple'), judge: T('reportJudge') };
 
-    // 九大部曲正确率分布
     const partRows = result.partStats.map((p) => {
       const r = p.total ? Math.round((p.correct / p.total) * 100) : 100;
       return `<tr><td>${escapeHtml(p.partName[L])}</td><td>${p.correct}</td><td>${p.total - p.correct}</td>`
@@ -131,6 +114,10 @@
     const typeRows = Object.keys(typeAgg).map((t) =>
       `<tr><td>${typeNameMap[t]}</td><td>${typeAgg[t].total}</td><td class="err">${typeAgg[t].wrong}</td></tr>`
     ).join('');
+
+    const weakParts = result.partStats
+      .filter((p) => p.correct < p.total)
+      .sort((a, b) => (b.total - b.correct) - (a.total - a.correct));
 
     const weakHtml = weakParts.length === 0
       ? `<p class="good">${escapeHtml(T('weakNone'))}</p>`
@@ -223,22 +210,11 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function saveToHistory(record) {
-    try {
-      const key = 'zesto_history';
-      const arr = JSON.parse(localStorage.getItem(key) || '[]');
-      // 同一 id 不重复写入；限制保存最近 20 条
-      if (!arr.find((r) => r.id === record.id)) {
-        arr.unshift(record);
-        if (arr.length > 20) arr.length = 20;
-        localStorage.setItem(key, JSON.stringify(arr));
-      }
-    } catch {
-      /* ignore */
-    }
-  }
+  document.getElementById('backBtn').onclick = () => { location.href = 'index.html'; };
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
+
+  load();
 })();
