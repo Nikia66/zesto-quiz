@@ -1,4 +1,4 @@
-import { listResults, initStore } from './_lib/store.js';
+import { listResults } from './_lib/store.js';
 import { checkAdmin } from './_lib/auth.js';
 
 function csvCell(v) {
@@ -8,24 +8,22 @@ function csvCell(v) {
 }
 
 // GET /api/admin/export?token=...&fmt=csv  → CSV 导出（带 BOM，Excel 中文不乱码）
-export async function handler(event) {
-  initStore(event);
-  const q = event.queryStringParameters || {};
+export default async function handler(request) {
+  const url = new URL(request.url);
+  const q = Object.fromEntries(url.searchParams.entries());
   const token = q.token || '';
   if (!(await checkAdmin(token))) {
-    return {
-      statusCode: 401,
+    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'unauthorized' }),
-    };
+    });
   }
   if ((q.fmt || 'csv') !== 'csv') {
     const rows = await listResults();
-    return {
-      statusCode: 200,
+    return new Response(JSON.stringify({ results: rows }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ results: rows }),
-    };
+    });
   }
   const rows = await listResults();
   const header = 'name,employeeId,lang,correct,total,rate,pass,durationSec,submittedAt,weakParts\n';
@@ -48,13 +46,12 @@ export async function handler(event) {
     )
     .join('\n');
   const csv = '﻿' + header + body;
-  return {
-    statusCode: 200,
+  return new Response(csv, {
+    status: 200,
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': 'attachment; filename="zesto_results.csv"',
       'Cache-Control': 'no-store',
     },
-    body: csv,
-  };
+  });
 }

@@ -1,23 +1,30 @@
 import { grade } from './_lib/core.js';
-import { writeResult, listResults, initStore } from './_lib/store.js';
+import { writeResult, listResults } from './_lib/store.js';
 import { randomUUID } from 'crypto';
 
 // 同一工号最多可考次数（前端提示与后端强制一致）
 const MAX_ATTEMPTS = 3;
 
 // POST /api/submit  → 服务端判分（对照私有题库），仅回传正确答用于学习，成绩入库
-export async function handler(event) {
-  initStore(event);
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+export default async function handler(request) {
+  if (request.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
   let body;
   try {
-    body = JSON.parse(event.body || '{}');
+    body = await request.json();
   } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Bad JSON' }) };
+    return new Response(JSON.stringify({ error: 'Bad JSON' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    });
   }
   const { name, employeeId, lang = 'zh', ids = [], answers = {}, durationSec } = body || {};
   if (!name || !employeeId || !Array.isArray(ids) || !answers) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'missing fields' }) };
+    return new Response(JSON.stringify({ error: 'missing fields' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    });
   }
 
   // 次数限制：同一工号已达上限则拒绝提交
@@ -25,11 +32,10 @@ export async function handler(event) {
     const all = await listResults();
     const used = all.filter((r) => r && String(r.employeeId) === String(employeeId)).length;
     if (used >= MAX_ATTEMPTS) {
-      return {
-        statusCode: 403,
+      return new Response(JSON.stringify({ error: 'attempt_limit', used, max: MAX_ATTEMPTS }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify({ error: 'attempt_limit', used, max: MAX_ATTEMPTS }),
-      };
+      });
     }
   } catch {
     // 读取失败不阻断提交，避免因存储异常误伤考生
@@ -66,9 +72,8 @@ export async function handler(event) {
     employeeId: String(employeeId),
     lang: L,
   };
-  return {
-    statusCode: 200,
+  return new Response(JSON.stringify(result), {
+    status: 200,
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
-    body: JSON.stringify(result),
-  };
+  });
 }

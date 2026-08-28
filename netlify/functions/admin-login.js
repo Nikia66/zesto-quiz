@@ -1,13 +1,18 @@
 import { signToken, adminUser } from './_lib/auth.js';
 
 // POST /api/admin/login  → 校验账号密码，签发无状态令牌
-export async function handler(event) {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+export default async function handler(request) {
+  if (request.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
   let body;
   try {
-    body = JSON.parse(event.body || '{}');
+    body = await request.json();
   } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Bad JSON' }) };
+    return new Response(JSON.stringify({ error: 'Bad JSON' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    });
   }
   const user = (body && body.user) || '';
   const pass = (body && body.pass) || '';
@@ -15,15 +20,13 @@ export async function handler(event) {
   const ADMIN_PASS = process.env.ADMIN_PASS || 'zesto2026';
   if (user === ADMIN_USER && pass === ADMIN_PASS) {
     const token = signToken(ADMIN_USER);
-    return {
-      statusCode: 200,
+    return new Response(JSON.stringify({ token }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ token }),
-    };
+    });
   }
-  return {
-    statusCode: 401,
+  return new Response(JSON.stringify({ error: 'invalid credentials' }), {
+    status: 401,
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
-    body: JSON.stringify({ error: 'invalid credentials' }),
-  };
+  });
 }
