@@ -1,18 +1,28 @@
-// 成绩存储：生产环境优先用 Netlify Blobs（线上持久化、跨实例共享）；
-// 当 Blobs 初始化失败或本地运行时，回退到 os.tmpdir() 下的本地文件。
+// 成绩存储：生产环境优先用 Netlify Blobs（线上持久化、跨实例共享）。
+// Netlify Functions 使用 Lambda 兼容模式（event/statusCode/body）时，必须在 getStore 之前调用 connectLambda(event)。
+// 本地运行或 Blobs 不可用时，回退到 os.tmpdir() 下的本地文件。
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import os from 'os';
+import { connectLambda, getStore } from '@netlify/blobs';
 
 const LOCAL_DIR = process.env.NETLIFY_LOCAL_DATA_DIR || join(os.tmpdir(), 'zesto-local-data');
 const STORE = 'zesto-quiz-results';
 const REVOKED_KEY = 'revoked-tokens';
 
-async function getBlobStore() {
-  // 尽量使用 Blobs；任何初始化失败都静默回退到本地文件，避免函数崩溃。
+// 在每个 handler 入口调用一次，把 Lambda event 的 Blobs 上下文连上。
+export function initStore(event) {
+  if (!event) return;
   try {
-    const { getStore } = await import('@netlify/blobs');
-    return getStore({ name: STORE });
+    connectLambda(event);
+  } catch {
+    // 非 Lambda 环境会抛错，忽略即可
+  }
+}
+
+async function getBlobStore() {
+  try {
+    return getStore(STORE);
   } catch {
     return null;
   }

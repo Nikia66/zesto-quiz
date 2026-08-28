@@ -145,7 +145,17 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!resp.ok) throw new Error('submit failed ' + resp.status);
+      if (!resp.ok) {
+        let msg = window.t('submitErr');
+        try {
+          const errBody = await resp.json();
+          if (errBody && errBody.error === 'attempt_limit') msg = window.t('attemptLimit');
+        } catch {}
+        submitted = false;
+        submitBtn.disabled = false;
+        alert(msg);
+        return;
+      }
       const result = await resp.json();
       sessionStorage.setItem('zesto_result', JSON.stringify(result));
       location.href = 'result.html';

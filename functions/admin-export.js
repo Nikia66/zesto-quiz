@@ -1,4 +1,4 @@
-import { listResults } from './_lib/store.js';
+import { listResults, initStore } from './_lib/store.js';
 import { checkAdmin } from './_lib/auth.js';
 
 function csvCell(v) {
@@ -9,6 +9,7 @@ function csvCell(v) {
 
 // GET /api/admin/export?token=...&fmt=csv  → CSV 导出（带 BOM，Excel 中文不乱码）
 export async function handler(event) {
+  initStore(event);
   const q = event.queryStringParameters || {};
   const token = q.token || '';
   if (!(await checkAdmin(token))) {

@@ -1,8 +1,9 @@
-import { listResults } from './_lib/store.js';
+import { listResults, initStore } from './_lib/store.js';
 import { checkAdmin } from './_lib/auth.js';
 
 // GET /api/admin/results?token=...  → 返回全部成绩（需有效管理员令牌）
 export async function handler(event) {
+  initStore(event);
   const token = (event.queryStringParameters && event.queryStringParameters.token) || '';
   if (!(await checkAdmin(token))) {
     return {

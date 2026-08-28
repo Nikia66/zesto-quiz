@@ -1,7 +1,9 @@
 import { revokeToken } from './_lib/auth.js';
+import { initStore } from './_lib/store.js';
 
 // POST /api/admin/logout  → 吊销当前令牌（登出后立即使其失效）
 export async function handler(event) {
+  initStore(event);
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
   let body;
   try {

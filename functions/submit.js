@@ -1,9 +1,13 @@
 import { grade } from './_lib/core.js';
-import { writeResult } from './_lib/store.js';
+import { writeResult, listResults, initStore } from './_lib/store.js';
 import { randomUUID } from 'crypto';
+
+// 同一工号最多可考次数（前端提示与后端强制一致）
+const MAX_ATTEMPTS = 3;
 
 // POST /api/submit  → 服务端判分（对照私有题库），仅回传正确答用于学习，成绩入库
 export async function handler(event) {
+  initStore(event);
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
   let body;
   try {
@@ -15,6 +19,22 @@ export async function handler(event) {
   if (!name || !employeeId || !Array.isArray(ids) || !answers) {
     return { statusCode: 400, body: JSON.stringify({ error: 'missing fields' }) };
   }
+
+  // 次数限制：同一工号已达上限则拒绝提交
+  try {
+    const all = await listResults();
+    const used = all.filter((r) => r && String(r.employeeId) === String(employeeId)).length;
+    if (used >= MAX_ATTEMPTS) {
+      return {
+        statusCode: 403,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ error: 'attempt_limit', used, max: MAX_ATTEMPTS }),
+      };
+    }
+  } catch {
+    // 读取失败不阻断提交，避免因存储异常误伤考生
+  }
+
   const L = lang === 'pt' ? 'pt' : 'zh';
   const g = grade({ lang: L, ids, answers });
   const submittedAt = new Date().toISOString();
